@@ -26,20 +26,27 @@ class RedisParser(object):
         Parses RESP array responses
         """
         size_of_array = int(string[0][1:])
-        return ' '.join([string[2:][i*2] for i in range(size_of_array)])
+        command_list = [string[2:][i*2] for i in range(size_of_array)]
+        return RedisCommand(command_list[0], command_list[1:])
 
     def parse_simple(self, string):
         """
         Parses simple responses (integers, errors, simple strings)
         """
-        return string[:1][0][1:]
+        return RedisCommand(string[:1][0][1:])
 
     def parse_bulk_string(self, string):
         """
         Parses bulk string responses
         """
-        return string[1]
+        return RedisCommand(string[1])
 
+
+class RedisCommand(object):
+
+    def __init__(self, command, *args):
+        self.command = command
+        self.args = args
 
 class RedisParserException(Exception):
     pass

@@ -1,6 +1,7 @@
 import asyncio
 import socket
 from redis_parser import RedisParser
+from random import choice
 from settings import SERVERS, PROXY_HOST, PROXY_PORT, RECV_SIZE
 
 
@@ -10,10 +11,6 @@ class EchoServerClientProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
-        message = data.decode()
-
-        parser = RedisParser()
-        parsed_command = parser.parse(message)
 
         # Make request to redis
         response_from_redis = self.forward_to_redis(data)
@@ -30,7 +27,16 @@ class EchoServerClientProtocol(asyncio.Protocol):
         :param data: raw RESP data
         :return: Response from Redis instance
         """
-        address, port = self.determine_redis_instance(data)
+        message = data.decode()
+        parser = RedisParser()
+        parsed_command = parser.parse(message)
+
+        # Choose a random server when command is argument-less (PING)
+        if not len(parsed_command.args[0]):
+            address, port = choice(SERVERS).split(':')
+        else:
+            address, port = \
+                self.determine_redis_instance(parsed_command.args[0][0])
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((address, int(port)))
         s.send(data)
